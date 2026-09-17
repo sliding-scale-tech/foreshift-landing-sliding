@@ -64,7 +64,7 @@ export default function Counters() {
                   </div>
                   <p className="rt-counter-items-name rt-margin-top-ten">{label}</p>
                   {plusIcon && (
-                    <img width="34" height="34" alt="Plus Icon" src="/images/-1.svg" className="rt-counter-design-image" />
+                    <img width="34" height="34" alt="Plus Icon" src="/images/-1.svg" loading="lazy" className="rt-counter-design-image" />
                   )}
                 </div>
               </div>

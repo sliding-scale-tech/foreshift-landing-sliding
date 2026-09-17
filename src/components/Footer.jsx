@@ -8,7 +8,7 @@ export default function Footer({ quickLinks, currentPath }) {
     <section className="footer">
       <div className="footer-wrapper-2">
         <div className="footer-columns">
-          <a href="#" className="w-inline-block">
+          <a href="#" aria-label="ForeShift, back to top" className="w-inline-block">
             <img
               sizes="(max-width: 1343px) 100vw, 1343px"
               srcSet={LOGOS.foreshiftFooter.srcSet}
@@ -20,7 +20,7 @@ export default function Footer({ quickLinks, currentPath }) {
           </a>
         </div>
         <div className="foot-column-links">
-          <h4 className="foot-header">Quick Links</h4>
+          <h4 aria-level="2" className="foot-header">Quick Links</h4>
           <div className="foot-link-wrapper">
             {quickLinks.map((link) => (
               <NavLink key={link.label} {...link} className="foot-link" />
@@ -28,7 +28,7 @@ export default function Footer({ quickLinks, currentPath }) {
           </div>
         </div>
         <div className="foot-column-links">
-          <h4 className="foot-header">Legal</h4>
+          <h4 aria-level="2" className="foot-header">Legal</h4>
           <div className="foot-link-wrapper">
             {LEGAL_LINKS.map((link) => (
               <NavLink key={link.to} {...link} current={link.to === currentPath} className="foot-link" />
@@ -36,7 +36,7 @@ export default function Footer({ quickLinks, currentPath }) {
           </div>
         </div>
         <div className="foot-column-links">
-          <h4 className="foot-header">Get In Touch</h4>
+          <h4 aria-level="2" className="foot-header">Get In Touch</h4>
           <div className="foot-link-wrapper">
             {CONTACT_LINKS.map((link) => (
               <a key={link.label} href={link.href} className="foot-link">
@@ -64,7 +64,7 @@ export function FooterDark() {
     <section className="footer-dark">
       <div className="container-2">
         <div className="footer-wrapper">
-          <Link to={ROUTES.home} className="footer-brand w-inline-block">
+          <Link to={ROUTES.home} aria-label="Home" className="footer-brand w-inline-block">
             <img
               src={LOGOS.sawda.src}
               loading="lazy"

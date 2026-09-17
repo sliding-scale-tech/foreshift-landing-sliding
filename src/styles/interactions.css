@@ -40,3 +40,8 @@ html.w-mod-js:not(.w-mod-ix3) :is(
 ) {
   visibility: hidden !important;
 }
+
+/* Webflow scroll module: focused anchor targets get no outline (inserted at runtime by webflow.js). */
+.wf-force-outline-none[tabindex="-1"]:focus {
+  outline: none;
+}

@@ -15,10 +15,10 @@
     "fonts": "node scripts/fetch-fonts.mjs"
   },
   "dependencies": {
-    "gsap": "^3.15.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "react-router-dom": "^7.18.4"
+    "react-router-dom": "^7.18.4",
+    "resend": "^6.28.1"
   },
   "devDependencies": {
     "@types/react": "^19.2.18",
@@ -30,6 +30,7 @@
     "pixelmatch": "^7.2.0",
     "playwright": "^1.63.0",
     "pngjs": "^7.0.0",
+    "postcss": "^8.5.28",
     "serve": "^14.2.6",
     "vite": "^8.3.0"
   }

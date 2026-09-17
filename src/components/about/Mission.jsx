@@ -7,7 +7,7 @@ export default function Mission() {
         <div className="spark-flex-row-4 spark-5-spacing spark-with-vertical-image">
           <img
             src="/images/6181711.jpg"
-            loading="eager"
+            loading="lazy"
             width="386"
             sizes="(max-width: 479px) 100vw, 386px"
             alt=""

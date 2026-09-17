@@ -1,1 +1,27 @@
 /* React-port global additions. Use :root tokens from site.css. Keep minimal. */
+
+/* Accessibility (WCAG AA contrast) — user-approved colour changes, the only intended visual deviations. */
+:root {
+  --shift-light-accessible: #0270df; /* was --shift-light #027ffc on white: 3.85:1 -> 4.79:1 */
+  --caption-muted-accessible: #767676; /* was #aaa on white: 2.32:1 -> 4.54:1 */
+}
+
+.bold-text-3,
+.bold-text-4 {
+  color: var(--shift-light-accessible);
+}
+
+.text-span-54 {
+  color: var(--caption-muted-accessible);
+}
+
+/* Nav links: #7d7d7d on white is 4.11:1 -> #767676 (4.54:1), user-approved. Scoped token override so the
+   default and .w--current states (both use --flowui-component-library--primary-base) pass; hover keeps
+   var(--cta-black). Nothing inside .f-navigation-link reads this token. */
+:root {
+  --nav-link-accessible: #767676;
+}
+
+.f-navigation-link {
+  --flowui-component-library--primary-base: var(--nav-link-accessible);
+}

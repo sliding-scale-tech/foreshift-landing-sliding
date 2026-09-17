@@ -1,4 +1,4 @@
-// Lighthouse performance runner.
+// Lighthouse runner: performance, accessibility, best-practices, seo.
 // Usage:
 //   node scripts/lighthouse.mjs [pageKey ...] [--base=http://localhost:4173] [--original]
 //                               [--presets=mobile,desktop] [--runs=3] [--label=build]
@@ -29,8 +29,8 @@ const outDir = path.join('lighthouse', label)
 fs.mkdirSync(outDir, { recursive: true })
 
 const CHROME = process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
-const mobileConfig = { extends: 'lighthouse:default', settings: { onlyCategories: ['performance'] } }
-const deskConfig = { ...desktopConfig, settings: { ...desktopConfig.settings, onlyCategories: ['performance'] } }
+const mobileConfig = { extends: 'lighthouse:default', settings: { onlyCategories: ['performance', 'accessibility', 'best-practices', 'seo'] } }
+const deskConfig = { ...desktopConfig, settings: { ...desktopConfig.settings, onlyCategories: ['performance', 'accessibility', 'best-practices', 'seo'] } }
 
 const median = (xs) => {
   const s = [...xs].sort((a, b) => a - b)
@@ -48,7 +48,7 @@ for (const key of pages) {
       // Fresh Chrome (and profile) per run so nothing is cached between runs.
       const chrome = await chromeLauncher.launch({
         chromePath: CHROME,
-        chromeFlags: ['--headless=new', '--no-first-run', '--disable-extensions'],
+        chromeFlags: ['--headless=new', '--no-first-run', '--disable-extensions', ...(base.startsWith('https://localhost') ? ['--ignore-certificate-errors'] : [])],
       })
       try {
         const res = await lighthouse(
@@ -66,13 +66,23 @@ for (const key of pages) {
           tbt: a['total-blocking-time'].numericValue,
           cls: a['cumulative-layout-shift'].numericValue,
           si: a['speed-index'].numericValue,
+          bp: Math.round((lhr.categories['best-practices'].score ?? 0) * 100),
+          seo: Math.round((lhr.categories.seo.score ?? 0) * 100),
+          otherFailures: ['best-practices', 'seo'].flatMap((c) => lhr.categories[c].auditRefs
+            .filter((ref) => ref.weight > 0 && a[ref.id].score !== null && a[ref.id].score < 1).map((ref) => `${c}:${ref.id}`)),
+          a11y: Math.round((lhr.categories.accessibility.score ?? 0) * 100),
+          a11yFailures: lhr.categories.accessibility.auditRefs
+            .filter((ref) => ref.weight > 0 && a[ref.id].score !== null && a[ref.id].score < 1)
+            .map((ref) => `${ref.id}(${(a[ref.id].details?.items || []).map((i) => i.node?.selector).filter(Boolean).join(' | ')})`),
         }
         if (lhr.runtimeError) r.error = lhr.runtimeError.message
         results.push(r)
         console.log(
           `${key.padEnd(12)} ${preset.padEnd(7)} run${i}  perf ${String(r.score).padStart(3)}  ` +
             `LCP ${fmt(r.lcp).padEnd(7)} FCP ${fmt(r.fcp).padEnd(7)} TBT ${fmt(r.tbt).padEnd(6)} ` +
-            `CLS ${r.cls.toFixed(3)}  SI ${fmt(r.si)}${r.error ? '  ERROR ' + r.error : ''}`,
+            `CLS ${r.cls.toFixed(3)}  SI ${fmt(r.si)}  a11y ${r.a11y} bp ${r.bp} seo ${r.seo}${r.error ? '  ERROR ' + r.error : ''}` +
+            (r.a11yFailures.length ? `\n    a11y failures: ${r.a11yFailures.join('\n                   ')}` : '') +
+            (r.otherFailures.length ? `\n    other failures: ${r.otherFailures.join(', ')}` : ''),
         )
       } finally {
         await chrome.kill()
@@ -82,18 +92,21 @@ for (const key of pages) {
     const row = {
       page: key, preset, url,
       median: m('score'), min: Math.min(...results.map((r) => r.score)),
+      bpMedian: m('bp'), bpMin: Math.min(...results.map((r) => r.bp)),
+      seoMedian: m('seo'), seoMin: Math.min(...results.map((r) => r.seo)),
+      a11yMedian: m('a11y'), a11yMin: Math.min(...results.map((r) => r.a11y)),
       lcp: m('lcp'), fcp: m('fcp'), tbt: m('tbt'), cls: m('cls'), si: m('si'),
       runs: results,
     }
     summary.push(row)
     console.log(
       `${key.padEnd(12)} ${preset.padEnd(7)} MEDIAN perf ${String(row.median).padStart(3)} (min ${row.min})  ` +
-        `LCP ${fmt(row.lcp)} FCP ${fmt(row.fcp)} TBT ${fmt(row.tbt)} CLS ${row.cls.toFixed(3)} SI ${fmt(row.si)}`,
+        `LCP ${fmt(row.lcp)} FCP ${fmt(row.fcp)} TBT ${fmt(row.tbt)} CLS ${row.cls.toFixed(3)} SI ${fmt(row.si)}  a11y ${row.a11yMedian} (min ${row.a11yMin})`,
     )
   }
 }
 fs.writeFileSync(path.join(outDir, 'summary.json'), JSON.stringify(summary, null, 2))
 console.log('\nSUMMARY')
 for (const r of summary) {
-  console.log(`${r.page.padEnd(12)} ${r.preset.padEnd(7)} median ${r.median} min ${r.min}  LCP ${fmt(r.lcp)} FCP ${fmt(r.fcp)} TBT ${fmt(r.tbt)} CLS ${r.cls.toFixed(3)} SI ${fmt(r.si)}`)
+  console.log(`${r.page.padEnd(12)} ${r.preset.padEnd(7)} median ${r.median} min ${r.min}  LCP ${fmt(r.lcp)} FCP ${fmt(r.fcp)} TBT ${fmt(r.tbt)} CLS ${r.cls.toFixed(3)} SI ${fmt(r.si)} | a11y ${r.a11yMedian}/${r.a11yMin} bp ${r.bpMedian}/${r.bpMin} seo ${r.seoMedian}/${r.seoMin} (median/min)`)
 }

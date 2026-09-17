@@ -14,6 +14,7 @@ export default function Navbar({
   logoCurrent = false,
   links = [],
   showLogin = false,
+  logoLabel,
 }) {
   return (
     <div
@@ -29,6 +30,7 @@ export default function Navbar({
         <Link
           to={ROUTES.home}
           aria-current={logoCurrent ? 'page' : undefined}
+          aria-label={logoLabel}
           className={`f-navigation-logo-link w-inline-block${logoCurrent ? ' w--current' : ''}`}
         >
           <img

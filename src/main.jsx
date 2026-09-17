@@ -12,7 +12,11 @@ const app = (
   </StrictMode>
 )
 const container = document.getElementById('root')
-// Production routes are prerendered at build time (scripts/prerender.mjs) -> hydrate that markup.
-// The dev server serves an empty #root -> plain client render.
-if (container.firstElementChild) hydrateRoot(container, app)
-else createRoot(container).render(app)
+// Production routes are prerendered at build time (scripts/prerender.mjs, which stamps
+// #root[data-route]) -> hydrate that markup. Anything else (dev server, SPA fallback for legacy
+// *.html / unknown URLs that redirect) -> plain client render.
+if (container.dataset.route === window.location.pathname) hydrateRoot(container, app)
+else {
+  container.textContent = ''
+  createRoot(container).render(app)
+}

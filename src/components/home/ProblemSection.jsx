@@ -57,7 +57,7 @@ export default function ProblemSection() {
                       />
                     </div>
                     <div>
-                      <Heading className="a-subheading-regular-2">{title}</Heading>
+                      <Heading aria-level={Heading === 'h5' ? 2 : undefined} className="a-subheading-regular-2">{title}</Heading>
                       <div className="text-block-5">{text}</div>
                     </div>
                   </div>

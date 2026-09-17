@@ -2,15 +2,15 @@ import { useRef, useState } from 'react'
 import { WF_PAGE_IDS } from '../../config/site'
 
 // "Get ahead of next week" early-access form (Webflow `w-form`).
-// The export has no `action`, so Webflow would post to its hosted form API. Here submission is simulated
-// as a success and the UI mirrors Webflow's forms module: form -> display:none, .w-form-done -> display:block
-// and focused. The original page's custom script also pushes a GTM dataLayer event on submit.
+// Posts to /api/early-access, which emails anthony@foreshift.ai via Resend.
+// UI mirrors Webflow's forms module: success hides the form and shows .w-form-done;
+// failure keeps the form and shows .w-form-fail.
 
 const FORM_NAME = 'Contact Form'
 
 const FIELDS = [
-  { id: 'Email', dataName: 'Email', type: 'email', label: 'Work Email' },
-  { id: 'Phone-Number', dataName: 'Phone Number', type: 'tel', label: 'Your city' },
+  { id: 'Email', dataName: 'Email', type: 'email', label: 'Work Email', required: true },
+  { id: 'Phone-Number', dataName: 'Phone Number', type: 'tel', label: 'Your city', required: true },
   {
     id: 'Company-Name',
     dataName: 'Company Name',
@@ -20,25 +20,45 @@ const FIELDS = [
         Restaurant Name <span className="text-span-54">(optional)</span>
       </>
     ),
+    required: false,
   },
 ]
 
 export default function EarlyAccessForm() {
-  const [submitted, setSubmitted] = useState(false)
+  const [status, setStatus] = useState('idle')
   const doneRef = useRef(null)
+  const failRef = useRef(null)
+  const submitted = status === 'success'
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
+    if (status === 'submitting') return
     const form = event.currentTarget
-    window.dataLayer = window.dataLayer || []
-    window.dataLayer.push({
-      event: 'form_submission_success',
-      form_id: form.id || 'webflow-form-no-id-0',
-      form_type: 'webflow-native',
-    })
-    setSubmitted(true)
-    // Webflow focuses the success region once it is shown.
-    requestAnimationFrame(() => doneRef.current?.focus())
+    const payload = {
+      email: form.Email.value.trim(),
+      city: form['Phone-Number'].value.trim(),
+      restaurantName: form['Company-Name'].value.trim(),
+    }
+    setStatus('submitting')
+    try {
+      const response = await fetch('/api/early-access', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!response.ok) throw new Error('submit failed')
+      window.dataLayer = window.dataLayer || []
+      window.dataLayer.push({
+        event: 'form_submission_success',
+        form_id: form.id || 'webflow-form-no-id-0',
+        form_type: 'webflow-native',
+      })
+      setStatus('success')
+      requestAnimationFrame(() => doneRef.current?.focus())
+    } catch {
+      setStatus('error')
+      requestAnimationFrame(() => failRef.current?.focus())
+    }
   }
 
   return (
@@ -62,7 +82,8 @@ export default function EarlyAccessForm() {
             id="wf-form-Contact-Form-2"
             name="wf-form-Contact-Form-2"
             data-name={FORM_NAME}
-            method="get"
+            method="post"
+            action="/api/early-access"
             className="f-contact-form"
             data-wf-page-id={WF_PAGE_IDS.home}
             data-wf-element-id="49fb6418-a641-4c94-311e-ab86aa7bb7a7"
@@ -70,7 +91,7 @@ export default function EarlyAccessForm() {
             onSubmit={handleSubmit}
             style={submitted ? { display: 'none' } : undefined}
           >
-            {FIELDS.map(({ id, dataName, type, label }) => (
+            {FIELDS.map(({ id, dataName, type, label, required }) => (
               <div key={id} className="f-margin-bottom-67">
                 <label htmlFor={id} className="f-field-label">
                   {label}
@@ -83,11 +104,19 @@ export default function EarlyAccessForm() {
                   placeholder=""
                   type={type}
                   id={id}
-                  required
+                  required={required}
+                  disabled={status === 'submitting'}
                 />
               </div>
             ))}
-            <input type="submit" data-wait="Submitting..." className="f-button-neutral-2 w-button" value="Get early access" />
+            <button
+              type="submit"
+              data-wait="Submitting..."
+              className="f-button-neutral-2 w-button"
+              disabled={status === 'submitting'}
+            >
+              {status === 'submitting' ? 'Submitting...' : 'Get early access'}
+            </button>
           </form>
           <div
             ref={doneRef}
@@ -100,11 +129,12 @@ export default function EarlyAccessForm() {
             <div className="text-block-12">Thank you! Your submission has been received!</div>
           </div>
           <div
+            ref={failRef}
             className="w-form-fail"
             tabIndex={-1}
             role="region"
             aria-label={`${FORM_NAME} failure`}
-            style={submitted ? { display: 'none' } : undefined}
+            style={status === 'error' ? { display: 'block' } : undefined}
           >
             <div>Oops! Something went wrong while submitting the form.</div>
           </div>

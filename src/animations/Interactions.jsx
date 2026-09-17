@@ -11,6 +11,7 @@ import { ROUTES } from '../config/site'
 import { createIX2 } from './ix2'
 import { createIX3 } from './ix3'
 import { createNavMenus } from './navMenu'
+import { createScrollSpy, createSmoothScroll } from './webflowScroll'
 
 // data-wf-page ids of the exported pages (html[data-wf-page] in reference/original/*.html)
 const PAGE_IDS = {
@@ -38,6 +39,7 @@ export default function Interactions() {
     let ix2 = null
     let ix3 = null
     let navCleanup = null
+    let spyCleanup = null
     let waitLoad = null
     let raf = 0
 
@@ -46,6 +48,8 @@ export default function Interactions() {
       if (waitLoad) document.removeEventListener('readystatechange', waitLoad)
       waitLoad = null
       navCleanup?.()
+      spyCleanup?.()
+      spyCleanup = null
       ix3?.destroy()
       ix2?.destroy()
       navCleanup = ix2 = ix3 = null
@@ -56,6 +60,7 @@ export default function Interactions() {
       if (!pageId) return
       html.setAttribute('data-wf-page', pageId)
       navCleanup = createNavMenus()
+      spyCleanup = createScrollSpy()
       ix2 = createIX2(pageId)
       const engine = ix2
       // Webflow evaluates scroll-driven events on the first readystatechange after IX2 init, which
@@ -83,11 +88,13 @@ export default function Interactions() {
       setup()
     }
 
+    const smoothScrollCleanup = createSmoothScroll()
     sync()
     const mo = new MutationObserver(sync)
     mo.observe(root, { childList: true, subtree: true })
     return () => {
       mo.disconnect()
+      smoothScrollCleanup()
       teardown()
     }
   }, [pathname])

@@ -66,13 +66,13 @@ function PricingCard({ tier }) {
     <div data-w-id={wId} className="rt-home-one-pricing-item">
       <div className="rt-insurence-heading">{name}</div>
       <p className={`rt-margin-bottom-twentyfive ${taglineClass}`}>{tagline}</p>
-      <h3 className="rt-pricing-text rt-color-dark">
+      <h3 aria-level="2" className="rt-pricing-text rt-color-dark">
         <span className="text-span-30">{price}</span> <span className="rt-per-month-text">/month</span>
       </h3>
       <div className="rt-home-one-pricing-line"></div>
       {features.map((feature) => (
         <div key={feature} className="rt-home-one-pricing-price-item">
-          <img width="19" height="19" alt="Check" src="/images/Vector-853.svg" />
+          <img width="19" height="19" alt="Check" src="/images/Vector-853.svg" loading="lazy" />
           <div className="rt-body-font-two">{feature}</div>
         </div>
       ))}
@@ -108,10 +108,10 @@ export default function Pricing() {
             </p>
           </div>
           <div className="rt-pricing-two-banner-design">
-            <img width="102" height="102" alt="Coin" src="/images/Coin-Design.svg" className="rt-auto-fit-13 rt-move-side" />
+            <img width="102" height="102" alt="Coin" src="/images/Coin-Design.svg" loading="lazy" className="rt-auto-fit-13 rt-move-side" />
           </div>
           <div className="rt-pricing-two-banner-design-two">
-            <img width="65" height="65" alt="Hand" src="/images/Hand.svg" className="rt-auto-fit-13 rt-move-up-down" />
+            <img width="65" height="65" alt="Hand" src="/images/Hand.svg" loading="lazy" className="rt-auto-fit-13 rt-move-up-down" />
           </div>
         </div>
         <section className="rt-pricing-two-price">

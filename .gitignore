@@ -3,3 +3,6 @@ dist
 parity
 lighthouse
 .DS_Store
+.env
+.env.*
+!.env.example
