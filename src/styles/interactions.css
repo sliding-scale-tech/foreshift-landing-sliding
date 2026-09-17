@@ -1,0 +1,42 @@
+/*
+ * Interactions engine styles (owned by the interactions agent).
+ * Verbatim ports of the no-flash <style> blocks Webflow emits in index.html <head>:
+ *  - IX2: at >=992px hide the main-breakpoint-only scroll-into-view targets until the IX2 engine
+ *    starts (src/animations/ix2.js adds html.w-mod-ix, then applies their initial states).
+ *  - IX3: hide IX3 timeline targets until IX3 initialises (html.w-mod-ix3, added on window load /
+ *    on route mount by src/animations/ix3.js).
+ * Selectors are page-scoped by Webflow ids, so they are inert on other routes.
+ */
+@media (min-width:992px) {
+  html.w-mod-js:not(.w-mod-ix) [data-w-id="c88b778b-a0ab-076e-fd97-79d1e2df5514"] {opacity:0;}
+  html.w-mod-js:not(.w-mod-ix) [data-w-id="c88b778b-a0ab-076e-fd97-79d1e2df551c"] {opacity:0;}
+  html.w-mod-js:not(.w-mod-ix) [data-w-id="c88b778b-a0ab-076e-fd97-79d1e2df5524"] {opacity:0;}
+  html.w-mod-js:not(.w-mod-ix) [data-w-id="c88b778b-a0ab-076e-fd97-79d1e2df554e"] {opacity:0;}
+  html.w-mod-js:not(.w-mod-ix) [data-w-id="c88b778b-a0ab-076e-fd97-79d1e2df5578"] {opacity:0;}
+  html.w-mod-js:not(.w-mod-ix) [data-w-id="144ecefe-6bb5-fc0f-5d50-ea14bc366009"] {opacity:0;}
+}
+
+html.w-mod-js:not(.w-mod-ix3) :is(
+  [data-wf-target*='["6aa91495972a5cddf72d871e","a626fb6a-fb9c-1b65-836e-2c984154f6ca"]'],
+  [data-wf-target*='["6aa91495972a5cddf72d871e","0b24b4be-9dd4-e6bd-e5ea-e3f12d7913f1"]'],
+  [data-wf-target*='["6aa91495972a5cddf72d871e","0b24b4be-9dd4-e6bd-e5ea-e3f12d7913f5"]'],
+  [data-wf-target*='["6aa91495972a5cddf72d871e","0b24b4be-9dd4-e6bd-e5ea-e3f12d7913f7"]'],
+  [data-wf-target*='["6aa91495972a5cddf72d871e","0b24b4be-9dd4-e6bd-e5ea-e3f12d7913fb"]'],
+  [data-wf-target*='["6aa91495972a5cddf72d871e","7eeae2a1-3bf1-0a4c-5351-39be08d006c6"]'],
+  [data-wf-target*='["6aa91495972a5cddf72d871e","0b24b4be-9dd4-e6bd-e5ea-e3f12d79140b"]'],
+  [data-wf-target*='["6aa91495972a5cddf72d871e","0b24b4be-9dd4-e6bd-e5ea-e3f12d791410"]'],
+  [data-wf-target*='["6aa91495972a5cddf72d871e","0b24b4be-9dd4-e6bd-e5ea-e3f12d791412"]'],
+  [data-wf-target*='["6aa91495972a5cddf72d871e","0b24b4be-9dd4-e6bd-e5ea-e3f12d791416"]'],
+  [data-wf-target*='["6aa91495972a5cddf72d871e","0b24b4be-9dd4-e6bd-e5ea-e3f12d7913fe"]'],
+  [data-wf-target*='["6aa91495972a5cddf72d871e","9200e114-d3c5-1be7-ace2-84bbd457067a"]'],
+  [data-wf-target*='["6aa91495972a5cddf72d871e","0b24b4be-9dd4-e6bd-e5ea-e3f12d791400"]'],
+  [data-wf-target*='["6aa91495972a5cddf72d871e","0b24b4be-9dd4-e6bd-e5ea-e3f12d791404"]'],
+  [data-wf-target*='["6aa91495972a5cddf72d871e","0b24b4be-9dd4-e6bd-e5ea-e3f12d791406"]'],
+  [animation="tag-hero"],
+  [animation="heading"],
+  [animation="text"],
+  [animation="rate"],
+  [animation="imgs"]
+) {
+  visibility: hidden !important;
+}

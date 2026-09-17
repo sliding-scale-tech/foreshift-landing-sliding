@@ -1,0 +1,15 @@
+/*
+ * Global style entry. ALL visual styling comes from these global sheets.
+ *  - normalize.css / webflow.css : Webflow base (do not edit)
+ *  - site.css                    : exported Webflow site styles incl. :root design tokens (--sawda-blue, --fore-dark, …)
+ *  - globals.css                 : React-port additions ONLY; must use tokens from site.css :root, no hardcoded values
+ * Components must use these class names — no inline styles, no per-component CSS, no hardcoded colors/sizes.
+ */
+@import './normalize.css';
+@import './webflow.css';
+@import './site.css';
+@import './globals.css';
+@import './pages/home.css';
+@import './pages/about.css';
+@import './pages/legal.css';
+@import './interactions.css';

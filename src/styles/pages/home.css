@@ -1,0 +1,12 @@
+/* home page global styles. Use :root tokens from site.css. Owned by the home page agent(s). */
+
+/* Export: inline style="display:grid" on the pricing options wrapper (index.html). */
+.rt-pricing-two-price .rt-home-one-pricing-option.rt-monthly-2 {
+  display: grid;
+}
+
+/* Export: trailing custom <style> at the end of index.html <body>. */
+.f-section-large-3,
+.f-button-neutral-2 {
+  pointer-events: auto !important;
+}

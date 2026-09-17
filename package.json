@@ -1,0 +1,36 @@
+{
+  "name": "foreshift-landing-page",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && node scripts/prerender.mjs",
+    "lint": "oxlint",
+    "preview": "vite preview --port 4173 --strictPort",
+    "serve:original": "serve reference/original -l 5500 --no-clipboard",
+    "parity": "node scripts/parity.mjs",
+    "dump:rendered": "node scripts/dump-rendered.mjs",
+    "lighthouse": "node scripts/lighthouse.mjs",
+    "fonts": "node scripts/fetch-fonts.mjs"
+  },
+  "dependencies": {
+    "gsap": "^3.15.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-router-dom": "^7.18.4"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@vitejs/plugin-react": "^6.1.1",
+    "chrome-launcher": "^1.2.1",
+    "lighthouse": "^13.4.1",
+    "oxlint": "^1.81.0",
+    "pixelmatch": "^7.2.0",
+    "playwright": "^1.63.0",
+    "pngjs": "^7.0.0",
+    "serve": "^14.2.6",
+    "vite": "^8.3.0"
+  }
+}
