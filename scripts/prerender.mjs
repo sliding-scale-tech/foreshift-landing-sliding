@@ -25,7 +25,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import postcss from 'postcss'
-import { chromium } from 'playwright'
 import { build } from 'vite'
 import { PAGES } from './pages.mjs'
 import { PAGE_TITLES, WF_PAGE_IDS } from '../src/config/site.js'
@@ -126,14 +125,40 @@ cssRoot.walkRules((rule) => {
 })
 const allSelectors = [...selectorSet]
 
-const browser = await chromium.launch()
+// Playwright Chromium is local-only: Vercel has no browser binary, and launch() would fail the
+// deploy. SSR markup still runs. Without a browser we keep the full stylesheet as "critical" and
+// preload every self-hosted woff2 so first paint still uses the right fonts.
+async function launchBrowser() {
+  if (process.env.VERCEL) return null
+  try {
+    const { chromium } = await import('playwright')
+    return await chromium.launch()
+  } catch (err) {
+    console.warn(`prerender: browser unavailable (${err.message}); using full CSS and on-disk fonts`)
+    return null
+  }
+}
+
+const browser = await launchBrowser()
 const MIME = { '.woff2': 'font/woff2', '.css': 'text/css', '.js': 'text/javascript', '.png': 'image/png', '.svg': 'image/svg+xml', '.avif': 'image/avif', '.jpg': 'image/jpeg', '.webp': 'image/webp' }
+
+function fontFilesOnDisk() {
+  const files = new Set()
+  for (const dir of [path.join('public', 'fonts'), path.join(DIST, 'fonts')]) {
+    if (!fs.existsSync(dir)) continue
+    for (const name of fs.readdirSync(dir)) {
+      if (name.endsWith('.woff2')) files.add(name)
+    }
+  }
+  return [...files].sort()
+}
 
 // Web-font files the browser requests for this page's static DOM (all text, any viewport, final
 // stylesheet) at the four Webflow breakpoints + a 412px phone. They are needed for first paint
 // (font-display is the UA default = block), so they are preloaded instead of being discovered only
 // after style/layout. Same files, same bytes -> no visual change; text paints with its final font.
 async function requestedFonts(html) {
+  if (!browser) return fontFilesOnDisk()
   const files = new Set()
   for (const width of [412, 479, 767, 991, 1440]) {
     const page = await browser.newPage({ javaScriptEnabled: false, viewport: { width, height: 900 } })
@@ -155,6 +180,7 @@ async function requestedFonts(html) {
   return [...files].sort()
 }
 async function matchingSelectors(html) {
+  if (!browser) return new Set(allSelectors)
   const page = await browser.newPage({ javaScriptEnabled: false })
   await page.setContent(html.replace(/<link[^>]+>/g, ''), { waitUntil: 'domcontentloaded' })
   const res = await page.evaluate((sels) => sels.map((s) => {
@@ -233,7 +259,7 @@ for (const [key, [file, route]] of Object.entries(PAGES)) {
       `(critical css ${(critical.length / 1024).toFixed(1)} of ${(fullCss.length / 1024).toFixed(1)} KiB, ${fonts.length} font preloads)`,
   )
 }
-await browser.close()
+if (browser) await browser.close()
 
 // Build-only artifacts must not ship.
 fs.rmSync(path.join(DIST, '.vite'), { recursive: true, force: true })
