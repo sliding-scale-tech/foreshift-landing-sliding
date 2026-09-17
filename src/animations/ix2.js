@@ -5,8 +5,15 @@
 // Semantics (target resolution incl. page-id check, initial states, group chaining via the
 // "carrier" item, loops, quick-effect delays, continuous smoothing, keyframe interpolation,
 // will-change bookkeeping, media-query restarts) follow the original line by line.
-import { ACTION_LISTS, EVENTS, MEDIA_QUERIES } from './data/ix2Data.js'
+import { ACTION_LISTS, EVENTS as EXPORT_EVENTS, MEDIA_QUERIES } from './data/ix2Data.js'
 import { applyEasing, bezier, optimizeFloat } from './easings.js'
+
+// Mobile hero override (user-approved deviation from the export, mobile LCP): the Home hero text
+// entrance e-233 (a-148: opacity 0 + 15% drop, 1.5s delay, 1s outQuart) runs only at the `main` and
+// `medium` breakpoints (>=768px), exactly as exported. At `small`/`tiny` (<=767px) the text is painted
+// from the prerendered HTML at first paint with a short CSS entrance instead — see the
+// "Mobile hero entrance" block in src/styles/interactions.css.
+const EVENTS = { ...EXPORT_EVENTS, 'e-233': { ...EXPORT_EVENTS['e-233'], mediaQueries: ['main', 'medium'] } }
 
 const MOVE = 'TRANSFORM_MOVE'
 const SCALE = 'TRANSFORM_SCALE'

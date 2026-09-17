@@ -7,8 +7,8 @@
 // Per route HTML:
 //  1. Markup from the SAME <App /> tree the client renders (react-dom/static prerender) -> hydration
 //     adopts the DOM unchanged.
-//  2. Webflow IX2 initial states that the export bakes into its HTML as inline `style` (only the two
-//     Home hero targets) are copied verbatim from reference/original/*.html onto the matching
+//  2. Webflow IX2 initial states that the export bakes into its HTML as inline `style` (the Home
+//     hero image; the hero text is CSS-owned, see CSS_OWNED_INITIAL_STATES) are copied verbatim from reference/original/*.html onto the matching
 //     data-w-id elements, so the pre-JS paint equals the export's pre-JS paint (no flash of the
 //     final state). Everything else is hidden pre-JS by interactions.css (html.w-mod-js no-flash
 //     rules, exactly like Webflow's <head> styles). The engine owns all of it after hydration.
@@ -17,13 +17,14 @@
 //     inlined, verbatim and in their original order. The full stylesheet then loads without blocking
 //     render. Because the full sheet contains every inlined rule and comes later in the cascade, the
 //     final computed styles are exactly those of the full sheet alone.
-//  4. The web fonts the page's text needs are preloaded (exact self-hosted Google binaries), so text
-//     paints with its final font on first paint (no swap mid-animation).
+//  4. The web-font files the route renders are preloaded (exact self-hosted Google binaries), so
+//     text paints with its final font on first paint (see FONT_PRELOADS).
 //  5. After first contentful paint the full stylesheet is attached; once it has loaded the JS entry
 //     is imported (like webflow.js at the end of <body> it never competes with first paint, and no
 //     JS-added state class can ever render against the critical subset only).
 import fs from 'node:fs'
 import path from 'node:path'
+import { parseHTML } from 'linkedom'
 import postcss from 'postcss'
 import { build } from 'vite'
 import { PAGES } from './pages.mjs'
@@ -31,6 +32,8 @@ import { PAGE_TITLES, WF_PAGE_IDS } from '../src/config/site.js'
 
 const DIST = 'dist'
 const SSR_OUT = path.join('node_modules', '.cache', 'prerender')
+
+const CSS_OWNED_INITIAL_STATES = ['fc305085-c286-b022-5e74-c40c5ba76a4e']
 
 // Lazy route modules (their chunks are modulepreloaded together with the entry import).
 const PAGE_SRC = {
@@ -125,69 +128,66 @@ cssRoot.walkRules((rule) => {
 })
 const allSelectors = [...selectorSet]
 
-// Playwright Chromium is local-only: Vercel has no browser binary, and launch() would fail the
-// deploy. SSR markup still runs. Without a browser we keep the full stylesheet as "critical" and
-// preload every self-hosted woff2 so first paint still uses the right fonts.
-async function launchBrowser() {
-  if (process.env.VERCEL) return null
-  try {
-    const { chromium } = await import('playwright')
-    return await chromium.launch()
-  } catch (err) {
-    console.warn(`prerender: browser unavailable (${err.message}); using full CSS and on-disk fonts`)
-    return null
-  }
-}
-
-const browser = await launchBrowser()
-const MIME = { '.woff2': 'font/woff2', '.css': 'text/css', '.js': 'text/javascript', '.png': 'image/png', '.svg': 'image/svg+xml', '.avif': 'image/avif', '.jpg': 'image/jpeg', '.webp': 'image/webp' }
-
-function fontFilesOnDisk() {
-  const files = new Set()
-  for (const dir of [path.join('public', 'fonts'), path.join(DIST, 'fonts')]) {
-    if (!fs.existsSync(dir)) continue
-    for (const name of fs.readdirSync(dir)) {
-      if (name.endsWith('.woff2')) files.add(name)
+// Selector matching runs on a static DOM (linkedom), so the build needs no browser and produces the
+// same output locally and on Vercel. `PRERENDER_VERIFY=1 npm run build` additionally matches every
+// selector in Playwright Chromium and fails if the static engine missed one Chromium matches
+// (extra static matches only keep a harmless rule).
+function matchingSelectors(html) {
+  const { document } = parseHTML(html)
+  return new Set(allSelectors.filter((sel) => {
+    try {
+      return !!document.querySelector(sel)
+    } catch {
+      return true // unsupported by the static engine -> keep the rule
     }
-  }
-  return [...files].sort()
+  }))
 }
 
-// Web-font files the browser requests for this page's static DOM (all text, any viewport, final
-// stylesheet) at the four Webflow breakpoints + a 412px phone. They are needed for first paint
-// (font-display is the UA default = block), so they are preloaded instead of being discovered only
-// after style/layout. Same files, same bytes -> no visual change; text paints with its final font.
-async function requestedFonts(html) {
-  if (!browser) return fontFilesOnDisk()
-  const files = new Set()
-  for (const width of [412, 479, 767, 991, 1440]) {
-    const page = await browser.newPage({ javaScriptEnabled: false, viewport: { width, height: 900 } })
-    await page.route('http://prerender.local/**', (route) => {
-      const url = new URL(route.request().url())
-      if (url.pathname === '/') return route.fulfill({ contentType: 'text/html', body: html })
-      const file = [path.join(DIST, url.pathname), path.join('public', url.pathname)].find((f) => fs.existsSync(f))
-      if (!file) return route.fulfill({ status: 404 })
-      return route.fulfill({ contentType: MIME[path.extname(file)] || 'application/octet-stream', body: fs.readFileSync(file) })
-    })
-    page.on('request', (r) => {
-      const m = r.url().match(/\/fonts\/([^/?]+\.woff2)$/)
-      if (m) files.add(m[1])
-    })
-    await page.goto('http://prerender.local/', { waitUntil: 'load' })
-    await page.evaluate(() => document.fonts.ready)
-    await page.close()
-  }
-  return [...files].sort()
-}
-async function matchingSelectors(html) {
-  if (!browser) return new Set(allSelectors)
-  const page = await browser.newPage({ javaScriptEnabled: false })
+let verifyBrowser = null
+async function verifyAgainstChromium(html, matched, route) {
+  if (process.env.PRERENDER_VERIFY !== '1') return
+  if (!verifyBrowser) verifyBrowser = await (await import('playwright')).chromium.launch()
+  const page = await verifyBrowser.newPage({ javaScriptEnabled: false })
   await page.setContent(html.replace(/<link[^>]+>/g, ''), { waitUntil: 'domcontentloaded' })
-  const res = await page.evaluate((sels) => sels.map((s) => {
-    try { return !!document.querySelector(s) } catch { return true }
+  const hits = await page.evaluate((sels) => sels.map((sel) => {
+    try { return !!document.querySelector(sel) } catch { return true }
   }), allSelectors)
   await page.close()
-  return new Set(allSelectors.filter((_, i) => res[i]))
+  const missed = allSelectors.filter((sel, i) => hits[i] && !matched.has(sel))
+  const extra = allSelectors.filter((sel, i) => !hits[i] && matched.has(sel))
+  console.log(`verify ${route}: chromium ${hits.filter(Boolean).length}, static ${matched.size}, missed ${missed.length}, extra ${extra.length}`)
+  if (missed.length) throw new Error(`static selector matching missed on ${route}: ${missed.slice(0, 10).join(' | ')}`)
+}
+
+// Route key -> web-font faces the route's text renders (measured in Chromium over the whole page at
+// 412/479/767/991/1440, hidden IX targets included). Only 7 files exist (fetch-fonts.mjs keeps just the
+// rendered faces), so each route preloads its 3-7 files (8-49 KB each). Measured: preloading only the
+// first-viewport faces let the others be discovered from CSS at VeryHigh priority right before first
+// paint, which Lighthouse counts as render-blocking (Home mobile FCP 0.91s -> 1.50s, score 99 -> 98).
+// Preloading also guarantees the legal-page hero text never rasterises before its font is ready.
+// [family, weight]
+const FONT_PRELOADS = {
+  home: [['Poppins', 300], ['Poppins', 400], ['Poppins', 500], ['Poppins', 600], ['Inter', 400], ['Montserrat', 400]],
+  about: [['Poppins', 300], ['Poppins', 400], ['Poppins', 500], ['Poppins', 600], ['Poppins', 700], ['Inter', 400], ['Montserrat', 500]],
+  terms: [['Poppins', 300], ['Poppins', 600], ['Poppins', 700], ['Montserrat', 400], ['Inter', 500]],
+  privacy: [['Poppins', 300], ['Poppins', 600], ['Poppins', 700], ['Montserrat', 400], ['Inter', 500]],
+  refunds: [['Poppins', 600], ['Montserrat', 400], ['Inter', 500]],
+  eligibility: [['Poppins', 600], ['Montserrat', 400], ['Inter', 500]],
+}
+const fontsCss = fs.readFileSync(path.join('public', 'fonts', 'fonts.css'), 'utf8')
+function fontPreloads(key) {
+  const out = new Map()
+  for (const [family, weight, media] of FONT_PRELOADS[key] || []) {
+    const face = [...fontsCss.matchAll(/@font-face\{([^}]*)\}/g)].map((m) => m[1]).find(
+      (b) => b.includes(`font-family:'${family}'`) && b.includes('font-style:normal') && b.includes(`font-weight:${weight};`),
+    )
+    if (!face) throw new Error(`no @font-face for ${family} ${weight}`)
+    const file = face.match(/url\(\/fonts\/([^)]+)\)/)[1]
+    // variable fonts share one file across weights: keep the least restrictive media query
+    if (out.has(file) && (!out.get(file) || !media)) out.set(file, undefined)
+    else if (!out.has(file)) out.set(file, media)
+  }
+  return [...out].map(([file, media]) => `<link rel="preload" href="/fonts/${file}" as="font" type="font/woff2" crossorigin${media ? ` media="${media}"` : ''}>`)
 }
 
 function criticalCss(matched) {
@@ -224,6 +224,9 @@ for (const [key, [file, route]] of Object.entries(PAGES)) {
   // those, and they pull below-the-fold images ahead of fonts/first paint -> strip them.
   let body = (await render(route)).replace(/^(?:<link rel="preload" as="image"[^>]*\/>)+/, '')
   const styles = exportInlineStyles(file)
+  // Initial states owned by src/styles/interactions.css instead of an inline style (Home hero text:
+  // hidden pre-IX2 only at >=768px, painted immediately on mobile — see the comment there).
+  for (const id of CSS_OWNED_INITIAL_STATES) styles.delete(id)
   let injected = 0
   body = body.replace(/<([a-z][a-z0-9]*)((?:\s[^>]*?)?\sdata-w-id="([^"]+)"[^>]*?)(\/?)>/g, (tag, name, attrs, id, selfClose) => {
     if (!styles.has(id) || /\sstyle="/.test(attrs)) return tag
@@ -239,9 +242,10 @@ for (const [key, [file, route]] of Object.entries(PAGES)) {
     .replace(scriptTag[0], '')
 
   const withFullCss = html.replace(cssTag[0], () => `<style>${fullCss}</style>`)
-  const critical = criticalCss(await matchingSelectors(withFullCss))
-  const fonts = await requestedFonts(withFullCss)
-  const preloads = fonts.map((f) => `<link rel="preload" href="/fonts/${f}" as="font" type="font/woff2" crossorigin>`)
+  const matched = matchingSelectors(withFullCss)
+  await verifyAgainstChromium(withFullCss, matched, route)
+  const critical = criticalCss(matched)
+  const preloads = fontPreloads(key)
   html = html
     .replace('<meta content="width=device-width, initial-scale=1" name="viewport" />', (m) => `${m}\n    ${preloads.join('\n    ')}`)
     .replace(
@@ -256,10 +260,10 @@ for (const [key, [file, route]] of Object.entries(PAGES)) {
   fs.writeFileSync(out, html)
   console.log(
     `prerendered ${route.padEnd(26)} -> ${out.padEnd(36)} ${(Buffer.byteLength(html) / 1024).toFixed(1)} KiB ` +
-      `(critical css ${(critical.length / 1024).toFixed(1)} of ${(fullCss.length / 1024).toFixed(1)} KiB, ${fonts.length} font preloads)`,
+      `(critical css ${(critical.length / 1024).toFixed(1)} of ${(fullCss.length / 1024).toFixed(1)} KiB, ${preloads.length} font preloads)`,
   )
 }
-if (browser) await browser.close()
+if (verifyBrowser) await verifyBrowser.close()
 
 // Build-only artifacts must not ship.
 fs.rmSync(path.join(DIST, '.vite'), { recursive: true, force: true })

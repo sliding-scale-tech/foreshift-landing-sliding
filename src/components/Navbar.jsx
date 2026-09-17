@@ -10,7 +10,10 @@ import { EXTERNAL, LOGOS, ROUTES } from '../config/site'
  */
 export default function Navbar({
   logo = LOGOS.foreshiftDark,
-  logoSizes = '(max-width: 479px) 100vw, 124px',
+  // Export used '(max-width: 479px) 100vw, 124px' on Home/About (the legal pages already use '124px').
+  // The logo renders ~124-133 CSS px wide at every width, so 100vw made phones download the 800w-1343w
+  // PNG (up to 169 KB). '124px' picks the same 500w file at DPR 1 (pixel-identical there).
+  logoSizes = '124px',
   logoCurrent = false,
   links = [],
   showLogin = false,

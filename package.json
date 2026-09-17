@@ -26,6 +26,7 @@
     "@vitejs/plugin-react": "^6.1.1",
     "chrome-launcher": "^1.2.1",
     "lighthouse": "^13.4.1",
+    "linkedom": "^0.18.13",
     "oxlint": "^1.81.0",
     "pixelmatch": "^7.2.0",
     "playwright": "^1.63.0",
